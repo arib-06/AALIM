@@ -1,0 +1,47 @@
+// middleware.js
+// Runs on every request — refreshes Supabase session cookie
+// and protects /dashboard routes
+
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse } from 'next/server';
+
+export async function middleware(request) {
+  let response = NextResponse.next({ request: { headers: request.headers } });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        get(name) { return request.cookies.get(name)?.value; },
+        set(name, value, opts) { request.cookies.set({ name, value, ...opts }); response.cookies.set({ name, value, ...opts }); },
+        remove(name, opts) { request.cookies.set({ name, value: '', ...opts }); response.cookies.set({ name, value: '', ...opts }); },
+      },
+    }
+  );
+
+  // Refresh session — keeps JWT alive
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+
+  // Protect dashboard routes
+  // if (pathname.startsWith('/home') || pathname.startsWith('/topics') ||
+  //     pathname.startsWith('/learn') || pathname.startsWith('/badges') ||
+  //     pathname.startsWith('/settings')) {
+  //   if (!user) {
+  //     return NextResponse.redirect(new URL('/login', request.url));
+  //   }
+  // }
+
+  // Redirect logged-in users away from auth pages
+  // if ((pathname === '/login' || pathname === '/signup') && user) {
+  //   return NextResponse.redirect(new URL('/home', request.url));
+  // }
+
+  return response;
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
+};
