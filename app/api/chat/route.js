@@ -1,27 +1,20 @@
 // app/api/chat/route.js
-// Connects to OpenAI to generate adaptive learning responses
-// Protected — requires valid Supabase session
+// Connects to Google Gemini AI to generate adaptive learning responses
+// Saves chat history to Supabase if user is logged in
 
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
 
 export async function POST(request) {
-  // 1. Auth check
   const supabase = createServerSupabase();
+  
+  // 1. Check if user is logged in (optional - chat works without login)
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+  
   const { message, topic, history = [] } = await request.json();
   if (!message) return NextResponse.json({ error: 'Message is required' }, { status: 400 });
 
-  // 2. Fetch user preferences (learning style, font scale etc.)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
-
-  // 3. Build system prompt based on topic and learning preferences
+  // 2. Build system prompt based on topic
   const systemPrompt = `You are AALIM, an adaptive learning assistant specialising in ${topic || 'general knowledge'}.
 
 Your goal is to explain concepts clearly and engagingly to the student.
@@ -34,45 +27,74 @@ Avoid jargon unless you define it first.
 Do NOT add unnecessary disclaimers. Do NOT say "Great question!".
 Be direct, warm, and educational.`;
 
-  // 4. Build messages array for OpenAI
-  const openaiMessages = [
-    { role: 'system', content: systemPrompt },
-    ...history.slice(-10).map(m => ({ role: m.role, content: m.content })),
-    { role: 'user',   content: message },
-  ];
+  // 3. Build conversation for Gemini
+  const conversationHistory = history.slice(-10).map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }]
+  }));
 
   try {
-    // 5. Call OpenAI
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model:       process.env.OPENAI_MODEL || 'gpt-4o',
-        messages:    openaiMessages,
-        max_tokens:  1000,
-        temperature: 0.7,
-      }),
-    });
+    // 4. Call Google Gemini API
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GOOGLE_MODEL || 'gemini-2.5-flash'}:generateContent?key=${process.env.GOOGLE_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            ...conversationHistory,
+            {
+              role: 'user',
+              parts: [{ text: `${systemPrompt}\n\nUser question: ${message}` }]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1000,
+          }
+        }),
+      }
+    );
 
     if (!res.ok) {
       const err = await res.json();
-      console.error('OpenAI error:', err);
+      console.error('Google Gemini API error:', err);
       return NextResponse.json({ error: 'AI service error' }, { status: 502 });
     }
 
-    const data    = await res.json();
-    const content = data.choices?.[0]?.message?.content || 'Sorry, no response was generated.';
+    const data = await res.json();
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, no response was generated.';
 
-    // 6. Save chat to Supabase (optional — saves most recent session)
-    await supabase.from('chat_history').insert({
-      user_id:   user.id,
-      title:     message.slice(0, 60),
-      messages:  [...history, { role: 'user', content: message }, { role: 'assistant', content }],
-      topic_key: topic,
-    });
+    // 5. Save chat history to Supabase (only if user is logged in)
+    if (user) {
+      try {
+        const fullMessages = [
+          ...history,
+          { role: 'user', content: message },
+          { role: 'assistant', content }
+        ];
+
+        const { data, error } = await supabase.from('chat_history').insert({
+          user_id: user.id,
+          title: message.slice(0, 60),
+          messages: fullMessages,
+          topic_key: topic,
+        });
+
+        if (error) {
+          console.error('Database save error:', error);
+        } else {
+          console.log('Chat saved successfully for user:', user.id);
+        }
+      } catch (dbError) {
+        console.error('Failed to save chat history:', dbError);
+        // Don't fail the request if saving fails
+      }
+    } else {
+      console.log('No user logged in - chat not saved');
+    }
 
     return NextResponse.json({ content });
 

@@ -1,6 +1,6 @@
 # AALIM — Adaptive Assistive Learning Interface Model
 
-A premium, gold-and-charcoal AI-powered learning platform built with **Next.js 14**, **Tailwind CSS**, **Supabase**, and **OpenAI GPT-4o**.
+A premium, gold-and-charcoal AI-powered learning platform built with **Next.js 14**, **Tailwind CSS**, **Supabase**, and **Google Gemini AI (Free)**.
 
 ---
 
@@ -11,7 +11,7 @@ A premium, gold-and-charcoal AI-powered learning platform built with **Next.js 1
 | Framework   | Next.js 14 (App Router)       |
 | Styling     | Tailwind CSS + custom CSS     |
 | Auth & DB   | Supabase (Postgres + Auth)    |
-| AI Engine   | OpenAI GPT-4o                 |
+| AI Engine   | Google Gemini (Free)          |
 | Icons       | Lucide React                  |
 | Hosting     | Vercel (recommended)          |
 
@@ -85,11 +85,12 @@ npm install
    - `anon` public key
    - `service_role` secret key
 
-### 3. Set Up OpenAI
+### 3. Set Up Google Gemini AI
 
-1. Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-2. Create a new API key
-3. Copy the key
+1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+2. Sign in with your Google account
+3. Click "Create API Key"
+4. Copy the key (no credit card required!)
 
 ### 4. Configure Environment Variables
 
@@ -103,8 +104,8 @@ Edit `.env.local`:
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-OPENAI_API_KEY=sk-your-openai-key
-OPENAI_MODEL=gpt-4o
+GOOGLE_API_KEY=your-google-api-key
+GOOGLE_MODEL=gemini-2.0-flash-exp
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 

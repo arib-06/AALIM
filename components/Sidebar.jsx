@@ -1,7 +1,7 @@
 'use client';
 // components/Sidebar.jsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -9,20 +9,19 @@ import {
   ChevronRight, Plus, User, LogOut, DollarSign, Code,
 } from 'lucide-react';
 import { getSupabase } from '@/lib/supabase';
-import { SAMPLE_CHATS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 const PROJECTS = [
   { label: 'Python Basics', Icon: Code },
-  { label: 'Finance 101',   Icon: DollarSign },
+  { label: 'Finance 101', Icon: DollarSign },
 ];
 
 const NAV = [
-  { href: '/home',     label: 'New chat',  Icon: PenLine          },
-  { href: '/topics',   label: 'Topics',    Icon: Layers           },
-  { href: '/badges',   label: 'Badges',    Icon: Trophy           },
-  { href: '/learn',    label: 'Learn',     Icon: BookOpen         },
-  { href: '/settings', label: 'Settings',  Icon: SlidersHorizontal},
+  { href: '/home', label: 'New chat', Icon: PenLine },
+  // { href: '/topics',   label: 'Topics',    Icon: Layers           }, // Temporarily disabled - has mouse event handlers in Server Component
+  { href: '/badges', label: 'Badges', Icon: Trophy },
+  { href: '/learn', label: 'Learn', Icon: BookOpen },
+  { href: '/settings', label: 'Settings', Icon: SlidersHorizontal },
 ];
 
 function NavItem({ href, label, Icon, active }) {
@@ -40,11 +39,36 @@ function NavItem({ href, label, Icon, active }) {
 }
 
 export default function Sidebar({ user }) {
-  const pathname            = usePathname();
-  const router              = useRouter();
-  const supabase            = getSupabase();
+  const pathname = usePathname();
+  const router = useRouter();
+  const supabase = getSupabase();
   const [showProjects, setShowProjects] = useState(true);
-  const [showChats,    setShowChats]    = useState(true);
+  const [showChats, setShowChats] = useState(true);
+  const [chatHistory, setChatHistory] = useState([]);
+
+  // Fetch chat history from Supabase
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchChats = async () => {
+      const { data, error } = await supabase
+        .from('chat_history')
+        .select('id, title, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (!error && data) {
+        setChatHistory(data);
+      }
+    };
+
+    fetchChats();
+    
+    // Refresh chat history every 3 seconds to show new chats
+    const interval = setInterval(fetchChats, 3000);
+    return () => clearInterval(interval);
+  }, [user, supabase]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -107,11 +131,25 @@ export default function Sidebar({ user }) {
 
         {showChats && (
           <div className="ml-1">
-            {SAMPLE_CHATS.map(chat => (
-              <button key={chat} className="w-full text-left px-3 py-2 rounded-md text-xs text-aalim-sub hover:bg-white/[0.04] hover:text-[#c8bfa0] transition-all truncate font-light">
-                {chat}
-              </button>
-            ))}
+            {user && chatHistory.length > 0 ? (
+              chatHistory.map(chat => (
+                <button 
+                  key={chat.id} 
+                  onClick={() => router.push(`/learn?chatId=${chat.id}`)}
+                  className="w-full text-left px-3 py-2 rounded-md text-xs text-aalim-sub hover:bg-white/[0.04] hover:text-[#c8bfa0] transition-all truncate font-light"
+                >
+                  {chat.title}
+                </button>
+              ))
+            ) : user ? (
+              <div className="px-3 py-2 text-xs text-aalim-muted font-light">
+                No chats yet. Start a conversation!
+              </div>
+            ) : (
+              <div className="px-3 py-2 text-xs text-aalim-muted font-light">
+                Sign in to save chat history
+              </div>
+            )}
           </div>
         )}
       </div>
