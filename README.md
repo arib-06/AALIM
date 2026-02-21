@@ -69,12 +69,14 @@ aalim/
 ### 1. Clone & Install
 
 ```bash
-git clone <your-repo-url>
-cd aalim
+git clone https://github.com/arib-06/AALIM.git
+cd AALIM
 npm install
 ```
 
 ### 2. Set Up Supabase
+
+**Option A: Use Your Own Supabase Project (Recommended for collaborators)**
 
 1. Go to [supabase.com](https://supabase.com) → Create a new project
 2. Go to **SQL Editor** → New Query
@@ -84,6 +86,10 @@ npm install
    - Project URL
    - `anon` public key
    - `service_role` secret key
+
+**Option B: Ask Project Owner for Credentials**
+
+If you're collaborating, ask the project owner to share the Supabase credentials with you securely (NOT via GitHub).
 
 ### 3. Set Up Google Gemini AI
 
@@ -98,16 +104,18 @@ npm install
 cp .env.local.example .env.local
 ```
 
-Edit `.env.local`:
+Edit `.env.local` with your own API keys:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 GOOGLE_API_KEY=your-google-api-key
-GOOGLE_MODEL=gemini-2.0-flash-exp
+GOOGLE_MODEL=gemini-2.5-flash
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+**⚠️ IMPORTANT:** Never commit `.env.local` to Git! It's already in `.gitignore`.
 
 ### 5. Run Development Server
 
