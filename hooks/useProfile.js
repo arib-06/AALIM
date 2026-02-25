@@ -10,6 +10,9 @@ const DEFAULT_PROFILE = {
   tts_enabled:   true,
   reduce_motion: false,
   dyslexia_font: false,
+  color_blind_mode: 'none',
+  greyscale:     false,
+  adhd_mode:     false,
   streak_days:   0,
 };
 
@@ -20,22 +23,54 @@ export function useProfile() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // User authenticated - try to load from database
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
 
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (data) setProfile({ ...DEFAULT_PROFILE, ...data });
+          if (data) {
+            setProfile({ ...DEFAULT_PROFILE, ...data });
+            // Sync localStorage
+            localStorage.setItem('aalim_prefs', JSON.stringify(data));
+          } else {
+            // No database profile, check localStorage
+            const stored = localStorage.getItem('aalim_prefs');
+            if (stored) {
+              setProfile({ ...DEFAULT_PROFILE, ...JSON.parse(stored) });
+            }
+          }
+        } else {
+          // User not authenticated - load from localStorage
+          const stored = localStorage.getItem('aalim_prefs');
+          if (stored) {
+            setProfile({ ...DEFAULT_PROFILE, ...JSON.parse(stored) });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        // Fallback to localStorage
+        const stored = localStorage.getItem('aalim_prefs');
+        if (stored) {
+          setProfile({ ...DEFAULT_PROFILE, ...JSON.parse(stored) });
+        }
+      }
       setLoading(false);
     })();
-  }, []);
+  }, [supabase]);
 
   const updateProfile = async (updates) => {
     setProfile(p => ({ ...p, ...updates }));
+    
+    // Always save to localStorage
+    localStorage.setItem('aalim_prefs', JSON.stringify({ ...profile, ...updates }));
+    
+    // Try to save to database if authenticated
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await supabase.from('profiles').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', user.id);
@@ -44,3 +79,4 @@ export function useProfile() {
 
   return { profile, loading, updateProfile };
 }
+

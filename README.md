@@ -17,6 +17,57 @@ A premium, gold-and-charcoal AI-powered learning platform built with **Next.js 1
 
 ---
 
+## Features
+
+✨ **AI-Powered Learning**
+- Chat-based learning with Google Gemini AI
+- Natural language explanations with step-by-step breakdowns
+- Context-aware responses based on topic
+
+🎯 **Smart Content Highlighting**
+- AI highlights important sentences automatically
+- Visual emphasis on critical concepts and definitions
+- Better retention through structured emphasis
+
+📖 **Interactive Learning**
+- Multiple learning modes (chat, guided lessons)
+- Progress tracking per topic
+- Real-time feedback and explanations
+
+🧪 **Built-In MCQ Tests**
+- 5-question quizzes for each topic (Math, Science, Programming, Finance, Data Science, Psychology)
+- **Dynamic question generation** using Google Gemini AI (adapts to current topic)
+- Fallback to comprehensive static test bank if API unavailable
+- Instant feedback with detailed explanations
+- Score tracking and unlimited retries
+- "Take Quiz" button on learning page for seamless access
+
+🔊 **Text-to-Speech**
+- Read lessons aloud using Web Speech API
+- Adjustable speech speed (0.9x)
+- Toggle on/off per response
+- Perfect for multi-modal learning
+
+🏆 **Achievement System**
+- Earn badges for learning milestones
+- Track progress across topics
+- Streak tracking and quick learner rewards
+- Rarity tiers: Common, Rare, Epic, Legendary
+
+🎨 **Neurodivergent-Friendly UI**
+- **Topic-Specific Color Themes:** Each topic has a calm, distinct color palette:
+  - **Math:** Soft purple (calming, analytical)
+  - **Science:** Soft teal (nature-inspired, grounding)
+  - **Finance:** Soft blue (trust, stability)
+  - **Data Science:** Soft indigo (focused, analytical)
+  - **Psychology:** Soft coral (warm, welcoming)
+  - **Programming:** Soft sage green (fresh, natural)
+- Color-coded backgrounds and UI elements for better visual differentiation
+- Reduces cognitive load and improves focus for neurodivergent learners
+- Calm color palette designed to reduce eye strain and mental fatigue
+
+---
+
 ## Project Structure
 
 ```
@@ -30,6 +81,7 @@ aalim/
 │   │   ├── home/page.js           # AI chat home
 │   │   ├── topics/page.js         # Browse all topics
 │   │   ├── learn/page.js          # AI-powered learning chat
+│   │   ├── quiz/page.js           # MCQ quiz & test mode
 │   │   ├── badges/page.js         # Achievements (server)
 │   │   │   └── BadgesClient.jsx   # Achievements (client)
 │   │   └── settings/page.js       # User preferences
@@ -43,6 +95,7 @@ aalim/
 ├── components/
 │   ├── Sidebar.jsx                # ChatGPT-style left sidebar
 │   ├── BadgeCard.jsx              # Badge with glow effects
+│   ├── QuizCard.jsx               # MCQ question card with instant feedback
 │   ├── Ring.jsx                   # SVG progress ring
 │   └── Toggle.jsx                 # On/off toggle switch
 ├── hooks/
@@ -127,6 +180,28 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
+### Run Frontend Only
+
+If you only want to run the Next.js frontend (no external services required), use the frontend scripts below. These run the Next dev server or a production server for just the frontend app.
+
+```bash
+# Development (hot-reload):
+npm run dev:frontend
+
+# Build for production:
+npm run build:frontend
+
+# Start production server:
+npm run start:frontend
+
+# Export a static site (no server-side APIs):
+npm run export
+```
+
+Notes:
+- `npm run export` produces a static site in `out/` but may not support server-side API routes or some App Router features.
+- If your app depends on Supabase, set `NEXT_PUBLIC_SUPABASE_*` env vars to a hosted Supabase project before running.
+
 ## Deployment (Vercel)
 
 ```bash
@@ -163,14 +238,64 @@ colors: {
 
 ## API Routes
 
-| Method | Endpoint          | Description                          |
-|--------|-------------------|--------------------------------------|
-| POST   | `/api/chat`       | Send message, get AI response        |
-| GET    | `/api/profile`    | Fetch current user's preferences     |
-| PATCH  | `/api/profile`    | Update user preferences              |
-| POST   | `/api/progress`   | Increment topic progress + badges    |
+| Method | Endpoint               | Description                                          |
+|--------|------------------------|------------------------------------------------------|
+| POST   | `/api/chat`            | Send message, get AI response                        |
+| POST   | `/api/quiz-generator`  | Generate AI quiz questions for a topic (dynamic)     |
+| GET    | `/api/profile`         | Fetch current user's preferences                     |
+| PATCH  | `/api/profile`         | Update user preferences                              |
+| POST   | `/api/progress`        | Increment topic progress + badges                    |
+
+The `/api/quiz-generator` endpoint generates unique quiz questions using Google Gemini AI based on the topic, ensuring questions are relevant to the current learning content.
 
 All routes require a valid Supabase session cookie (set automatically on login).
+
+---
+
+## Quiz & Assessment System
+
+**MCQ Tests** are built into AALIM for self-assessment and content revision:
+
+- **Location:** `app/(dashboard)/quiz/page.js`
+- **Dynamic Generation:** Questions are generated using Google Gemini AI based on the topic (via `/api/quiz-generator`)
+- **Fallback:** Comprehensive static TEST_BANK in `lib/constants.js` used if API is unavailable
+- **Topics:** 6 topics (Math, Science, Programming, Finance, Data Science, Psychology)
+- **Questions per Quiz:** 5 multiple-choice questions per topic
+- **Instant Feedback:** Explanations provided for each answer
+- **Score Tracking:** Visual progress bar + percentage score
+- **Topic-Aligned:** Questions adapt to the topic the user is currently studying
+- **Retry Logic:** Users can retake quizzes with newly generated questions for practice
+
+**How to Access:**
+- **From Learn Page:** Click the "Take Quiz" button in the learning header
+- **From Sidebar:** Click **Quiz** and select a topic
+- Complete all 5 questions to see results
+- Review explanations and retake for practice
+
+**How It Works:**
+1. User selects a topic or clicks "Take Quiz" while learning
+2. Quiz page requests dynamic questions from `/api/quiz-generator`
+3. Gemini AI generates 5 unique questions based on the topic
+4. If the API fails, fallback to pre-built questions in TEST_BANK
+5. User completes quiz and gets instant feedback with explanations
+6. AI-generated badge appears (✨ AI Generated) to indicate dynamic questions
+
+**Adding New Quizzes:**
+To add more questions, edit `lib/constants.js` and add to `TEST_BANK`:
+
+```javascript
+export const TEST_BANK = {
+  'your-topic': [
+    {
+      question: 'Your question here?',
+      options: ['A', 'B', 'C', 'D'],
+      correct: 0, // index of correct answer
+      explanation: 'Why this answer is correct...'
+    },
+    // More questions...
+  ]
+}
+```
 
 ---
 

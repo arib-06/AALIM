@@ -5,8 +5,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:frontend": "next dev",
     "build": "next build",
+    "build:frontend": "next build",
     "start": "next start",
+    "start:frontend": "next start",
+    "export": "next export",
     "lint": "next lint"
   },
   "dependencies": {

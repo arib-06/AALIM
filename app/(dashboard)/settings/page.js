@@ -14,6 +14,9 @@ export default function SettingsPage() {
     tts_enabled:   true,
     reduce_motion: false,
     dyslexia_font: false,
+    color_blind_mode: 'none',
+    greyscale:     false,
+    adhd_mode:     false,
   });
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
@@ -21,27 +24,80 @@ export default function SettingsPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from('profiles')
-        .select('font_scale, line_height, tts_enabled, reduce_motion, dyslexia_font')
-        .eq('id', user.id)
-        .single();
-      if (data) setPrefs(data);
-      setLoading(false);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // User is authenticated - try to load from database
+          const { data, error } = await supabase
+            .from('profiles')
+          .select('font_scale, line_height, tts_enabled, reduce_motion, dyslexia_font, eye_tracking, color_blind_mode, greyscale')
+          
+          if (error) {
+            // Profile doesn't exist, check localStorage
+            const stored = localStorage.getItem('aalim_prefs');
+            if (stored) {
+              setPrefs(JSON.parse(stored));
+            }
+          } else if (data) {
+            setPrefs(data);
+            // Sync localStorage with database
+            localStorage.setItem('aalim_prefs', JSON.stringify(data));
+          }
+        } else {
+          // User not authenticated - load from localStorage
+          const stored = localStorage.getItem('aalim_prefs');
+          if (stored) {
+            setPrefs(JSON.parse(stored));
+          }
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading settings:', error);
+        // Try localStorage as final fallback
+        const stored = localStorage.getItem('aalim_prefs');
+        if (stored) {
+          setPrefs(JSON.parse(stored));
+        }
+        setLoading(false);
+      }
     })();
-  }, []);
+  }, [supabase]);
 
   const update = (key, val) => setPrefs(p => ({ ...p, [key]: val }));
 
   const savePrefs = async () => {
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from('profiles').update(prefs).eq('id', user.id);
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      // Always save to localStorage first (works without account)
+      localStorage.setItem('aalim_prefs', JSON.stringify(prefs));
+      
+      // Try to save to database if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const response = await fetch('/api/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(prefs),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Error saving preferences to database:', errorData);
+          // Still consider it a success since localStorage saved
+        }
+      }
+      
+      setSaving(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+      // Even if there's an error, localStorage should have saved
+      setSaving(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    }
   };
 
   const labelClass = 'text-[0.65rem] uppercase tracking-[0.15em] font-semibold mb-1.5 block px-0.5';
@@ -85,7 +141,30 @@ export default function SettingsPage() {
     {
       title: 'Readability',
       rows: [
-        { label: 'Dyslexia-Friendly Font', sub: 'Lexend with enhanced spacing', ctrl: <Toggle checked={!!prefs.dyslexia_font} onChange={v => update('dyslexia_font', v)} /> },
+        { label: 'Dyslexia-Friendly Font', sub: 'OpenDyslexic with enhanced letter recognition', ctrl: <Toggle checked={!!prefs.dyslexia_font} onChange={v => update('dyslexia_font', v)} /> },
+      ],
+    },
+    {
+      title: 'Vision & Color',
+      rows: [
+        {
+          label: 'Color Blind Mode',
+          sub: 'Adjust colors for color vision deficiency',
+          ctrl: (
+            <select
+              value={prefs.color_blind_mode}
+              onChange={e => update('color_blind_mode', e.target.value)}
+              className="px-3 py-1.5 rounded text-sm bg-white/10 border border-white/20 text-aalim-text"
+            >
+              <option value="none">None</option>
+              <option value="protanopia">Red-blind (Protanopia)</option>
+              <option value="deuteranopia">Green-blind (Deuteranopia)</option>
+              <option value="tritanopia">Blue-yellow (Tritanopia)</option>
+              <option value="monochromacy">Monochromacy</option>
+            </select>
+          ),
+        },
+        { label: 'Greyscale Mode', sub: 'Convert all colors to greyscale', ctrl: <Toggle checked={!!prefs.greyscale} onChange={v => update('greyscale', v)} /> },
       ],
     },
     {
@@ -93,6 +172,12 @@ export default function SettingsPage() {
       rows: [
         { label: 'Text-to-Speech',  sub: 'Click any text to hear it read aloud', ctrl: <Toggle checked={!!prefs.tts_enabled}   onChange={v => update('tts_enabled',   v)} /> },
         { label: 'Reduce Motion',   sub: 'Disable animations and transitions',   ctrl: <Toggle checked={!!prefs.reduce_motion} onChange={v => update('reduce_motion', v)} /> },
+      ],
+    },
+    {
+      title: 'Learning Support',
+      rows: [
+        { label: 'ADHD-Friendly Mode', sub: 'Break content into smaller chunks to reduce overwhelm', ctrl: <Toggle checked={!!prefs.adhd_mode} onChange={v => update('adhd_mode', v)} /> },
       ],
     },
     {

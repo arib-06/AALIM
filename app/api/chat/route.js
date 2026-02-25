@@ -11,21 +11,35 @@ export async function POST(request) {
   // 1. Check if user is logged in (optional - chat works without login)
   const { data: { user } } = await supabase.auth.getUser();
   
-  const { message, topic, history = [] } = await request.json();
+  const { message, topic, history = [], adhd_mode = false } = await request.json();
   if (!message) return NextResponse.json({ error: 'Message is required' }, { status: 400 });
 
   // 2. Build system prompt based on topic
+  const adhdModeInstructions = adhd_mode 
+    ? `\n\nADHD-FRIENDLY MODE ACTIVE:
+- Keep responses SHORT and focused (max 2-3 short paragraphs)
+- Break complex ideas into tiny, digestible chunks
+- Use bullet points instead of long paragraphs when possible
+- One main idea per message - ask follow-up questions to explore further
+- Avoid overwhelming lists or too much information at once`
+    : '';
+
   const systemPrompt = `You are AALIM, an adaptive learning assistant specialising in ${topic || 'general knowledge'}.
 
 Your goal is to explain concepts clearly and engagingly to the student.
 Always structure your response well. Use **bold** for key terms.
 Use \`code\` formatting for any code or technical terms.
 
+IMPORTANT: Highlight the most important or critical sentences by wrapping them with [IMPORTANT] and [/IMPORTANT] tags.
+Examples:
+- [IMPORTANT]Variables store data in memory[/IMPORTANT]
+- [IMPORTANT]Photosynthesis converts light energy into chemical energy[/IMPORTANT]
+
 Keep explanations concise but thorough. Prefer step-by-step explanations.
 Avoid jargon unless you define it first.
 
 Do NOT add unnecessary disclaimers. Do NOT say "Great question!".
-Be direct, warm, and educational.`;
+Be direct, warm, and educational.${adhdModeInstructions}`;
 
   // 3. Build conversation for Gemini
   const conversationHistory = history.slice(-10).map(m => ({
@@ -52,7 +66,7 @@ Be direct, warm, and educational.`;
           ],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 1000,
+            maxOutputTokens: adhd_mode ? 500 : 1000,
           }
         }),
       }

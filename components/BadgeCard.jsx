@@ -5,17 +5,25 @@ import { useState } from 'react';
 import { Check, Lock } from 'lucide-react';
 import Ring from './Ring';
 import { RARITY } from '@/lib/constants';
-import { badgePct } from '@/lib/utils';
+import { badgePct, speak } from '@/lib/utils';
+import { useProfile } from '@/hooks/useProfile';
 
 export default function BadgeCard({ badge, index = 0 }) {
   const [hov, setHov] = useState(false);
+  const { profile, loading } = useProfile();
   const { key, label, desc, Icon, unlocked, xp, rarity, prog, goal } = badge;
   const R   = RARITY[rarity];
   const pct = badgePct(prog, goal, unlocked);
 
+  const handleClick = () => {
+    if (loading) return;
+    console.log('TTS Enabled:', profile.tts_enabled);
+    speak(`${label}. ${desc}`, profile.tts_enabled);
+  };
+
   return (
     <div
-      onClick={() => typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.speak(new SpeechSynthesisUtterance(`${label}. ${desc}`))}
+      onClick={handleClick}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       className="relative rounded-xl p-6 cursor-pointer overflow-hidden fade-up"

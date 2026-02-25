@@ -26,7 +26,7 @@ export async function PATCH(request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const allowed = ['font_scale','line_height','tts_enabled','reduce_motion','dyslexia_font'];
+  const allowed = ['font_scale','line_height','tts_enabled','reduce_motion','dyslexia_font','color_blind_mode','greyscale','adhd_mode'];
   const updates = {};
   allowed.forEach(k => { if (body[k] !== undefined) updates[k] = body[k]; });
   updates.updated_at = new Date().toISOString();
