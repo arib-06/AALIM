@@ -77,7 +77,7 @@ export default function Sidebar({ user }) {
   };
 
   return (
-    <aside className="w-60 flex-shrink-0 bg-aalim-sidebar border-r flex flex-col h-screen sticky top-0 overflow-y-auto"
+    <aside className="sidebar w-60 flex-shrink-0 bg-aalim-sidebar border-r flex flex-col h-screen sticky top-0 overflow-y-auto"
       style={{ borderColor: 'rgba(255,255,255,0.07)' }}
     >
       <div className="flex flex-col gap-0.5 p-2 flex-1">

@@ -16,34 +16,51 @@ export default function DashboardLayout({ children }) {
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [colorBlindMode, setColorBlindMode] = useState('none');
   const [greyscaleMode, setGreyscaleMode] = useState(false);
+  const [highContrast, setHighContrast] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [largeTargets, setLargeTargets] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   const loadDyslexicFont = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
-    
-    let shouldEnableDyslexic = false;
-    let ttsStatus = true;
-    let colorBlindStatus = 'none';
-    let greyscaleStatus = false;
-    
-    if (user) {
-      const { data } = await supabase
-        .from('profiles')
-        .select('dyslexia_font, tts_enabled, color_blind_mode, greyscale')
-        .eq('id', user.id)
-        .single();
+    try {
+      // Add timeout to Supabase calls (2 seconds max)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), 2000)
+      );
       
-      if (data?.dyslexia_font) {
-        shouldEnableDyslexic = true;
-      }
-      if (data?.tts_enabled !== undefined) {
-        ttsStatus = data.tts_enabled;
-      }
-      if (data?.color_blind_mode) {
-        colorBlindStatus = data.color_blind_mode;
-      }
-      if (data?.greyscale !== undefined) {
-        greyscaleStatus = data.greyscale;
+      const userPromise = supabase.auth.getUser();
+      const { data: { user } } = await Promise.race([userPromise, timeoutPromise])
+        .catch(() => ({ data: { user: null } }));
+      
+      setUser(user);
+      
+      let shouldEnableDyslexic = false;
+      let ttsStatus = true;
+      let colorBlindStatus = 'none';
+      let greyscaleStatus = false;
+      let highContrastStatus = false;
+      let focusModeStatus = false;
+      let largeTargetsStatus = false;
+      let reduceMotionStatus = false;
+      
+      if (user) {
+        const profilePromise = supabase
+          .from('profiles')
+          .select('dyslexia_font, tts_enabled, color_blind_mode, greyscale, high_contrast, focus_mode, large_targets, reduce_motion')
+          .eq('id', user.id)
+          .single();
+        
+        const { data } = await Promise.race([profilePromise, timeoutPromise])
+          .catch(() => ({ data: null }));
+        
+        if (data?.dyslexia_font) shouldEnableDyslexic = true;
+        if (data?.tts_enabled !== undefined) ttsStatus = data.tts_enabled;
+        if (data?.color_blind_mode) colorBlindStatus = data.color_blind_mode;
+        if (data?.greyscale !== undefined) greyscaleStatus = data.greyscale;
+        if (data?.high_contrast !== undefined) highContrastStatus = data.high_contrast;
+        if (data?.focus_mode !== undefined) focusModeStatus = data.focus_mode;
+        if (data?.large_targets !== undefined) largeTargetsStatus = data.large_targets;
+        if (data?.reduce_motion !== undefined) reduceMotionStatus = data.reduce_motion;
       }
       
       // Check localStorage as fallback
@@ -54,33 +71,69 @@ export default function DashboardLayout({ children }) {
         if (prefs.tts_enabled !== undefined) ttsStatus = prefs.tts_enabled;
         if (prefs.color_blind_mode) colorBlindStatus = prefs.color_blind_mode;
         if (prefs.greyscale !== undefined) greyscaleStatus = prefs.greyscale;
+        if (prefs.high_contrast !== undefined) highContrastStatus = prefs.high_contrast;
+        if (prefs.focus_mode !== undefined) focusModeStatus = prefs.focus_mode;
+        if (prefs.large_targets !== undefined) largeTargetsStatus = prefs.large_targets;
+        if (prefs.reduce_motion !== undefined) reduceMotionStatus = prefs.reduce_motion;
       }
-    } else {
-      // No user - check localStorage
+      
+      // Apply all settings
+      if (shouldEnableDyslexic) {
+        setDyslexicFont(true);
+        document.body.classList.add('dyslexic-font');
+      } else {
+        setDyslexicFont(false);
+        document.body.classList.remove('dyslexic-font');
+      }
+      
+      // Apply new accessibility features
+      document.body.classList.toggle('high-contrast', highContrastStatus);
+      document.body.classList.toggle('focus-mode', focusModeStatus);
+      document.body.classList.toggle('large-targets', largeTargetsStatus);
+      document.body.classList.toggle('reduce-motion', reduceMotionStatus);
+      
+      setTtsEnabled(ttsStatus);
+      setColorBlindMode(colorBlindStatus);
+      setGreyscaleMode(greyscaleStatus);
+      setHighContrast(highContrastStatus);
+      setFocusMode(focusModeStatus);
+      setLargeTargets(largeTargetsStatus);
+      setReduceMotion(reduceMotionStatus);
+      
+      // Apply color blind and greyscale filters
+      applyAccessibilityFilters(colorBlindStatus, greyscaleStatus);
+    } catch (error) {
+      console.log('Auth check skipped (timeout) - using localStorage');
+      // Fallback to localStorage only
       const stored = localStorage.getItem('aalim_prefs');
       if (stored) {
         const prefs = JSON.parse(stored);
-        if (prefs.dyslexia_font) shouldEnableDyslexic = true;
-        if (prefs.tts_enabled !== undefined) ttsStatus = prefs.tts_enabled;
-        if (prefs.color_blind_mode) colorBlindStatus = prefs.color_blind_mode;
-        if (prefs.greyscale !== undefined) greyscaleStatus = prefs.greyscale;
+        if (prefs.dyslexia_font) {
+          setDyslexicFont(true);
+          document.body.classList.add('dyslexic-font');
+        }
+        if (prefs.tts_enabled !== undefined) setTtsEnabled(prefs.tts_enabled);
+        if (prefs.color_blind_mode) setColorBlindMode(prefs.color_blind_mode);
+        if (prefs.greyscale !== undefined) setGreyscaleMode(prefs.greyscale);
+        if (prefs.high_contrast !== undefined) {
+          setHighContrast(prefs.high_contrast);
+          document.body.classList.toggle('high-contrast', prefs.high_contrast);
+        }
+        if (prefs.focus_mode !== undefined) {
+          setFocusMode(prefs.focus_mode);
+          document.body.classList.toggle('focus-mode', prefs.focus_mode);
+        }
+        if (prefs.large_targets !== undefined) {
+          setLargeTargets(prefs.large_targets);
+          document.body.classList.toggle('large-targets', prefs.large_targets);
+        }
+        if (prefs.reduce_motion !== undefined) {
+          setReduceMotion(prefs.reduce_motion);
+          document.body.classList.toggle('reduce-motion', prefs.reduce_motion);
+        }
+        applyAccessibilityFilters(prefs.color_blind_mode || 'none', prefs.greyscale || false);
       }
     }
-    
-    if (shouldEnableDyslexic) {
-      setDyslexicFont(true);
-      document.body.classList.add('dyslexic-font');
-    } else {
-      setDyslexicFont(false);
-      document.body.classList.remove('dyslexic-font');
-    }
-    
-    setTtsEnabled(ttsStatus);
-    setColorBlindMode(colorBlindStatus);
-    setGreyscaleMode(greyscaleStatus);
-    
-    // Apply color blind and greyscale filters
-    applyAccessibilityFilters(colorBlindStatus, greyscaleStatus);
   };
 
   const applyAccessibilityFilters = (colorBlind, greyscale) => {

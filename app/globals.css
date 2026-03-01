@@ -80,3 +80,74 @@
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.45; }
 }
+
+
+/* ── Accessibility Features ─────────────────────────────── */
+
+/* High Contrast Mode */
+body.high-contrast {
+  --aalim-bg: #000000;
+  --aalim-text: #ffffff;
+  --aalim-sub: #e0e0e0;
+  --gold: #ffdd00;
+}
+
+body.high-contrast * {
+  border-color: #ffffff !important;
+}
+
+body.high-contrast button,
+body.high-contrast a {
+  outline: 2px solid #ffdd00;
+  outline-offset: 2px;
+}
+
+/* Focus Mode - Minimal Distractions */
+body.focus-mode .sidebar,
+body.focus-mode nav,
+body.focus-mode aside {
+  display: none !important;
+}
+
+body.focus-mode main {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Large Click Targets */
+body.large-targets button,
+body.large-targets a,
+body.large-targets input[type="submit"],
+body.large-targets [role="button"] {
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 12px 20px !important;
+  font-size: 1.1rem !important;
+}
+
+body.large-targets input,
+body.large-targets textarea,
+body.large-targets select {
+  min-height: 44px !important;
+  font-size: 1.1rem !important;
+  padding: 12px !important;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}

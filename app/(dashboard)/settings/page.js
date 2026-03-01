@@ -17,6 +17,9 @@ export default function SettingsPage() {
     color_blind_mode: 'none',
     greyscale:     false,
     adhd_mode:     false,
+    high_contrast: false,
+    focus_mode:    false,
+    large_targets: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
@@ -147,6 +150,7 @@ export default function SettingsPage() {
     {
       title: 'Vision & Color',
       rows: [
+        { label: 'High Contrast Mode', sub: 'Increase contrast for better visibility', ctrl: <Toggle checked={!!prefs.high_contrast} onChange={v => update('high_contrast', v)} /> },
         {
           label: 'Color Blind Mode',
           sub: 'Adjust colors for color vision deficiency',
@@ -178,6 +182,13 @@ export default function SettingsPage() {
       title: 'Learning Support',
       rows: [
         { label: 'ADHD-Friendly Mode', sub: 'Break content into smaller chunks to reduce overwhelm', ctrl: <Toggle checked={!!prefs.adhd_mode} onChange={v => update('adhd_mode', v)} /> },
+        { label: 'Focus Mode', sub: 'Distraction-free interface with minimal UI', ctrl: <Toggle checked={!!prefs.focus_mode} onChange={v => update('focus_mode', v)} /> },
+      ],
+    },
+    {
+      title: 'Motor & Interaction',
+      rows: [
+        { label: 'Large Click Targets', sub: 'Bigger buttons and links for easier clicking', ctrl: <Toggle checked={!!prefs.large_targets} onChange={v => update('large_targets', v)} /> },
       ],
     },
     {
