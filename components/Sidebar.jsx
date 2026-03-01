@@ -8,7 +8,7 @@ import {
   PenLine, Search, Layers, Trophy, BookOpen, SlidersHorizontal,
   ChevronRight, Plus, User, LogOut, DollarSign, Code,
 } from 'lucide-react';
-import { getSupabase } from '@/lib/supabase';
+// import { getSupabase } from '@/lib/supabase'; // DISABLED FOR TESTING
 import { cn } from '@/lib/utils';
 
 const PROJECTS = [
@@ -41,37 +41,32 @@ function NavItem({ href, label, Icon, active }) {
 export default function Sidebar({ user }) {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = getSupabase();
+  // const supabase = getSupabase(); // DISABLED FOR TESTING
   const [showProjects, setShowProjects] = useState(true);
   const [showChats, setShowChats] = useState(true);
   const [chatHistory, setChatHistory] = useState([]);
 
-  // Fetch chat history from Supabase
-  useEffect(() => {
-    if (!user) return;
-    
-    const fetchChats = async () => {
-      const { data, error } = await supabase
-        .from('chat_history')
-        .select('id, title, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (!error && data) {
-        setChatHistory(data);
-      }
-    };
-
-    fetchChats();
-    
-    // Refresh chat history every 3 seconds to show new chats
-    const interval = setInterval(fetchChats, 3000);
-    return () => clearInterval(interval);
-  }, [user, supabase]);
+  // Fetch chat history from Supabase - DISABLED FOR TESTING
+  // useEffect(() => {
+  //   if (!user) return;
+  //   const fetchChats = async () => {
+  //     const { data, error } = await supabase
+  //       .from('chat_history')
+  //       .select('id, title, created_at')
+  //       .eq('user_id', user.id)
+  //       .order('created_at', { ascending: false })
+  //       .limit(10);
+  //     if (!error && data) {
+  //       setChatHistory(data);
+  //     }
+  //   };
+  //   fetchChats();
+  //   const interval = setInterval(fetchChats, 3000);
+  //   return () => clearInterval(interval);
+  // }, [user, supabase]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    // await supabase.auth.signOut(); // DISABLED FOR TESTING
     router.push('/');
     router.refresh();
   };

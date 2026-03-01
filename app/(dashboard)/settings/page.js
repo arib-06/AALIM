@@ -3,11 +3,11 @@
 
 import { useState, useEffect } from 'react';
 import Toggle from '@/components/Toggle';
-import { getSupabase } from '@/lib/supabase';
+// import { getSupabase } from '@/lib/supabase'; // DISABLED FOR TESTING
 import { Check, Loader2 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const supabase = getSupabase();
+  // const supabase = getSupabase(); // DISABLED FOR TESTING
   const [prefs, setPrefs] = useState({
     font_scale:    100,
     line_height:   1.6,
@@ -26,81 +26,23 @@ export default function SettingsPage() {
   const [saved,   setSaved]   = useState(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-          // User is authenticated - try to load from database
-          const { data, error } = await supabase
-            .from('profiles')
-          .select('font_scale, line_height, tts_enabled, reduce_motion, dyslexia_font, eye_tracking, color_blind_mode, greyscale')
-          
-          if (error) {
-            // Profile doesn't exist, check localStorage
-            const stored = localStorage.getItem('aalim_prefs');
-            if (stored) {
-              setPrefs(JSON.parse(stored));
-            }
-          } else if (data) {
-            setPrefs(data);
-            // Sync localStorage with database
-            localStorage.setItem('aalim_prefs', JSON.stringify(data));
-          }
-        } else {
-          // User not authenticated - load from localStorage
-          const stored = localStorage.getItem('aalim_prefs');
-          if (stored) {
-            setPrefs(JSON.parse(stored));
-          }
-        }
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading settings:', error);
-        // Try localStorage as final fallback
-        const stored = localStorage.getItem('aalim_prefs');
-        if (stored) {
-          setPrefs(JSON.parse(stored));
-        }
-        setLoading(false);
-      }
-    })();
-  }, [supabase]);
+    // SUPABASE DISABLED - Load from localStorage only
+    const stored = localStorage.getItem('aalim_prefs');
+    if (stored) {
+      setPrefs(JSON.parse(stored));
+    }
+    setLoading(false);
+  }, []);
 
   const update = (key, val) => setPrefs(p => ({ ...p, [key]: val }));
 
   const savePrefs = async () => {
     setSaving(true);
-    try {
-      // Always save to localStorage first (works without account)
-      localStorage.setItem('aalim_prefs', JSON.stringify(prefs));
-      
-      // Try to save to database if user is authenticated
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const response = await fetch('/api/profile', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(prefs),
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Error saving preferences to database:', errorData);
-          // Still consider it a success since localStorage saved
-        }
-      }
-      
-      setSaving(false);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } catch (error) {
-      console.error('Error saving preferences:', error);
-      // Even if there's an error, localStorage should have saved
-      setSaving(false);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    }
+    // Save to localStorage only (Supabase disabled for testing)
+    localStorage.setItem('aalim_prefs', JSON.stringify(prefs));
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
   };
 
   const labelClass = 'text-[0.65rem] uppercase tracking-[0.15em] font-semibold mb-1.5 block px-0.5';
